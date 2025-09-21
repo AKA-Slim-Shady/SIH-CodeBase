@@ -1,0 +1,12 @@
+# Dependencies
+# Ignores all 'node_modules' directories, wherever they appear in the project.
+node_modules
+**/node_modules
+
+# Logs and development artifacts
+npm-debug.log
+yarn-error.log
+.DS_Store
+
+# Environment Secrets
+.env
