@@ -1,154 +1,94 @@
 
 -----
 
-# 🚀 SIH Civic Issue Reporter: Setup Guide
+# 🚀 SIH Civic Issue Reporter: Quickstart Guide
 
-This project is built as a **Monorepo** containing a React Native mobile application and a Node.js/Express API connected to a PostgreSQL database (hosted on Neon).
+This guide ensures you can install dependencies, configure your network, and successfully launch the frontend client and backend API on your local machine.
 
-## 🛠️ Tech Stack
+## 1\. Project Structure
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Mobile Frontend** | **React Native (via Expo)** | Citizen app for reporting issues (iOS/Android). |
-| **Backend API** | **Node.js + Express** | Handles all business logic, routing, and real-time updates. |
-| **Database** | **PostgreSQL (Neon)** | Scalable database with the **PostGIS** extension for geospatial queries. |
-| **Real-time** | **Socket.IO** | Enables instant status updates and new report notifications. |
-
------
-
-## 📂 Project Structure
-
-The repository is structured with a clear separation of concerns between client and server.
+Your codebase consists of two main, independent folders within your root project directory (`civic-reporting-sih/`):
 
 ```
-SIH-CODEBASE/
-├── .gitignore          # Ignores all node_modules, .env, and build artifacts
-|
-├── backend/            # NODE.JS API SERVER
-│   ├── node_modules/   # (Dependencies installed via 'npm install')
-│   ├── .env            # REQUIRED: Database URL and server port
-│   ├── index.js        # Main Express server and API routes
-│   └── database.js     # PostgreSQL (Neon) connection client and pool manager
-|
-└── frontend/           # REACT NATIVE MOBILE APP
-    └── SIH-APP/        # (The Expo project root)
-        ├── node_modules/
-        ├── package.json
-        ├── App.js        # Main file, imports ReportForm
-        └── src/
-            └── components/
-                └── ReportForm.js # Component for capturing GPS and submitting report
+civic-reporting-sih/
+├── backend/            # Node.js/Express API
+└── frontend/SIH-APP/   # React Native Mobile App (The UI)
 ```
 
 -----
 
-## ⚙️ Local Setup Instructions
+## 2\. Dependencies and Configuration
 
-Follow these steps precisely to get the entire stack running on your local machine.
+### A. Environment Setup
 
-### Step 1: Clone and Install Dependencies
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone [YOUR REPO URL]
-    cd civic-reporting-sih
-    ```
-
-2.  **Install Backend Dependencies:**
-
-    ```bash
-    cd backend
-    npm install
-    ```
-
-3.  **Install Frontend Dependencies:**
-
-    ```bash
-    cd ../frontend/SIH-APP
-    npm install
-    ```
-
-### Step 2: Database and Configuration
-
-1.  **Configure Neon Database URL:**
-
-      * Create a file named **`.env`** inside the `backend/` directory.
-      * Paste your Neon connection string. **Ensure the password is URL-encoded if it contains special characters.**
-
-    <!-- end list -->
+1.  **Create `.env`:** In the **`backend/`** folder, create a file named **`.env`** and paste the shared Neon database connection string (provided by the team lead).
 
     ```env
-    # backend/.env
+    # backend/.env (Crucial for database connection)
     DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require&..."
     PORT=3000
     ```
 
-2.  **Run Initial Database Setup (PostGIS):**
+2.  **Install Dependencies:** Run `npm install` in both project roots:
 
-      * Connect to your Neon database (via the web console or psql).
-      * Execute the following SQL commands **once**:
+    ```bash
+    # Install backend packages
+    cd backend
+    npm install
 
-    <!-- end list -->
-
-    ```sql
-    CREATE EXTENSION postgis;
-
-    CREATE TABLE reports (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        status VARCHAR(50) DEFAULT 'New',
-        location GEOMETRY(Point, 4326)
-    );
-
-    CREATE INDEX reports_gix ON reports USING GIST (location);
+    # Install frontend packages
+    cd ../frontend/SIH-APP
+    npm install
     ```
 
-### Step 3: Configure Frontend Network
+### B. Network Configuration (Crucial for Mobile)
 
-The mobile app must know your computer's IP address to connect.
+The mobile app must use your computer's IP to find the server.
 
-1.  **Find Your Local IP:** (e.g., `192.168.x.x` or `10.0.2.2` for Android Emulator).
+1.  **Find your Local IP:** Determine your computer's local network IP address (e.g., `192.168.x.x`).
 
-2.  **Update the Base URL:** Edit the file **`frontend/SIH-APP/src/components/ReportForm.js`** and change the `BASE_URL` constant.
+2.  **Update the URL:** Find the file where the base URL is defined in your frontend code (likely in a file like `App.js` or a central API client file) and replace the placeholder:
 
     ```javascript
-    // In ReportForm.js
+    // Example: Locate the API URL definition in your frontend code
     const BASE_URL = 'http://[YOUR_LOCAL_IP_ADDRESS]:3000'; 
     ```
 
-### Step 4: Run the Application
+-----
 
-You must start the backend server and the frontend client simultaneously.
+## 3\. Launching the Application
 
-1.  **Start the Backend API:**
+You must start the backend server before starting the frontend bundler.
 
-      * In your first terminal window:
+### Step 1: Start the Backend API
 
-    <!-- end list -->
-
+1.  **Navigate:**
     ```bash
     cd backend
-    npm start  # Runs index.js via nodemon
     ```
+2.  **Launch:**
+    ```bash
+    npm start
+    ```
+    *The console should confirm the API is running on port 3000.*
 
-    *(You should see "Backend API running on http://localhost:3000")*
+### Step 2: Start the Frontend Client
 
-2.  **Start the Frontend Client:**
-
-      * In your second terminal window:
-
-    <!-- end list -->
+1.  **Navigate:**
 
     ```bash
-    cd frontend/SIH-APP
-    npm start  # Starts the Expo Metro Bundler
+    cd ../frontend/SIH-APP
     ```
 
-    *(This will display a **QR code** in the terminal or browser.)*
+2.  **Launch:**
+
+    ```bash
+    npm start
+    ```
+
+    *(This starts the Expo Metro Bundler and displays a **QR code**.)*
 
 3.  **Launch the App:**
 
       * **Mobile:** Open the **Expo Go** app on your phone and **scan the QR code**.
-      * **Web (Quick Test):** Press **`w`** in the terminal window running the Expo Bundler.
+      * **Web (Testing):** Press the **`w` key** in the terminal running the Expo Bundler to open the app in your browser.
