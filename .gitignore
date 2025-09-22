@@ -10,3 +10,9 @@ yarn-error.log
 
 # Environment Secrets
 .env
+
+**/node_modules
+
+# Ignore backend node_modules
+backend/node_modules/
+backend/.env
