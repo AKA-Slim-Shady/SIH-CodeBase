@@ -15,7 +15,7 @@ import Post from './models/postModel.js';
 import Like from './models/likeModel.js';
 
 // --- ROUTE IMPORTS ---
-import webhookRoutes from './routes/webhookRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import postRoutes from './routes/postRoutes.js';
 
@@ -33,16 +33,12 @@ connectDB();
 
 // --- Middlewares ---
 app.use(cors());
-
-// IMPORTANT: The raw body parser for the webhook MUST come before express.json()
-app.use('/api/webhooks/clerk', express.raw({ type: 'application/json' }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
 // --- API ROUTES ---
-app.use('/api/webhooks', webhookRoutes);
+app.use('/api/auth', authRoutes); // New auth routes
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 

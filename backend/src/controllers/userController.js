@@ -1,11 +1,11 @@
+// backend/src/controllers/userController.js
+
 import User from '../models/userModel.js';
 
-// GET /api/users - Get a list of all users
 export const getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll({
-            // Exclude the primary key 'id' from the result, as clerkId is the public ID
-            attributes: { exclude: ['id'] }
+            attributes: { exclude: ['password'] } // Never send the password hash
         });
         res.status(200).json(users);
     } catch (error) {
@@ -14,12 +14,10 @@ export const getAllUsers = async (req, res) => {
     }
 };
 
-// GET /api/users/:userid - Get a single user by their Clerk ID
 export const getUserById = async (req, res) => {
     try {
-        const user = await User.findOne({ 
-            where: { clerkId: req.params.userid },
-            attributes: { exclude: ['id'] } 
+        const user = await User.findByPk(req.params.userid, {
+            attributes: { exclude: ['password'] }
         });
 
         if (!user) {
@@ -32,25 +30,21 @@ export const getUserById = async (req, res) => {
     }
 };
 
-// PATCH /api/users/:userid - Update a user's information
 export const updateUser = async (req, res) => {
-    // Security Check: A user can only update their own profile.
-    // req.auth.userId comes from the Clerk middleware
-    if (req.auth.userId !== req.params.userid) {
-         return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
+    if (req.user.id != req.params.userid) {
+        return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
     }
-    
+
     try {
         const [numberOfAffectedRows] = await User.update(req.body, {
-            where: { clerkId: req.params.userid }
+            where: { id: req.params.userid }
         });
 
         if (numberOfAffectedRows === 0) {
             return res.status(404).json({ message: 'User not found or no new data to update' });
         }
-        
-        // Fetch and return the updated user data
-        const updatedUser = await User.findOne({ where: { clerkId: req.params.userid } });
+
+        const updatedUser = await User.findByPk(req.params.userid, { attributes: { exclude: ['password'] } });
         res.status(200).json(updatedUser);
 
     } catch (error) {
@@ -59,3 +53,20 @@ export const updateUser = async (req, res) => {
     }
 };
 
+export const deleteUser = async (req, res) => {
+    if (req.user.id != req.params.userid) {
+        return res.status(403).json({ message: 'Forbidden: You can only delete your own profile.' });
+    }
+
+    try {
+        const user = await User.findByPk(req.params.userid);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        await user.destroy();
+        res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+};

@@ -12,10 +12,8 @@ export const createPost = async (req, res) => {
         return res.status(400).json({ message: 'Image and description are required.' });
     }
     try {
-        const clerkId = req.auth.userId;
-        const user = await User.findOne({ where: { clerkId: clerkId } });
-        if (!user) { return res.status(404).json({ message: 'User not found.' }); }
-        const newPost = await Post.create({ img, desc, location, userId: user.id });
+        const userId = req.user.id;
+        const newPost = await Post.create({ img, desc, location, userId: userId });
         res.status(201).json(newPost);
     } catch (error) {
         console.error('Error creating post:', error);
@@ -55,11 +53,10 @@ export const getPostById = async (req, res) => {
 
 export const updatePost = async (req, res) => {
     try {
-        const clerkId = req.auth.userId;
-        const user = await User.findOne({ where: { clerkId } });
+        const userId = req.user.id;
         const post = await Post.findByPk(req.params.postid);
         if (!post) { return res.status(404).json({ message: 'Post not found' }); }
-        if (post.userId !== user.id) {
+        if (post.userId !== userId) {
             return res.status(403).json({ message: 'Forbidden: You can only update your own posts.' });
         }
         await post.update(req.body);
@@ -72,11 +69,10 @@ export const updatePost = async (req, res) => {
 
 export const deletePost = async (req, res) => {
     try {
-        const clerkId = req.auth.userId;
-        const user = await User.findOne({ where: { clerkId } });
+        const userId = req.user.id;
         const post = await Post.findByPk(req.params.postid);
         if (!post) { return res.status(404).json({ message: 'Post not found' }); }
-        if (post.userId !== user.id) {
+        if (post.userId !== userId) {
             return res.status(403).json({ message: 'Forbidden: You can only delete your own posts.' });
         }
         await post.destroy();
@@ -90,18 +86,16 @@ export const deletePost = async (req, res) => {
 
 // --- NEW FUNCTIONS FOR LIKING/UNLIKING ---
 
-// POST /api/posts/like/:postid - Like a post
 export const likePost = async (req, res) => {
     try {
-        const clerkId = req.auth.userId;
-        const user = await User.findOne({ where: { clerkId } });
+        const userId = req.user.id;
+        const user = await User.findByPk(userId);
         const post = await Post.findByPk(req.params.postid);
 
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        // Use the special method 'addLike' created by Sequelize's association
         await post.addLike(user);
         res.status(200).json({ message: 'Post liked successfully' });
 
@@ -111,23 +105,36 @@ export const likePost = async (req, res) => {
     }
 };
 
-// DELETE /api/posts/like/:postid - Unlike a post
 export const unlikePost = async (req, res) => {
     try {
-        const clerkId = req.auth.userId;
-        const user = await User.findOne({ where: { clerkId } });
+        const userId = req.user.id;
+        const user = await User.findByPk(userId);
         const post = await Post.findByPk(req.params.postid);
 
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        // Use the special method 'removeLike' created by Sequelize
         await post.removeLike(user);
         res.status(200).json({ message: 'Post unliked successfully' });
 
     } catch (error) {
         console.error('Error unliking post:', error);
         res.status(500).json({ error: 'Failed to unlike post' });
+    }
+};
+
+// --- NEW FUNCTION FOR GETTING POST DEPARTMENT ---
+// You will need to create a Department model and establish an association between Post and Department for this to work.
+export const getPostDept = async (req, res) => {
+    try {
+        const post = await Post.findByPk(req.params.postid, {
+            include: { model: Department } // Assuming Department is your model name
+        });
+        if (!post) { return res.status(404).json({ message: 'Post not found' }); }
+        res.status(200).json(post.Department); // Send back the associated department
+    } catch (error) {
+        console.error('Error fetching post department:', error);
+        res.status(500).json({ error: 'Failed to fetch post department' });
     }
 };

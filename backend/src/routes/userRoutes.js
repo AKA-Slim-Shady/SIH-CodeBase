@@ -6,15 +6,17 @@ import {
     getAllUsers,
     getUserById,
     updateUser,
+    deleteUser
 } from '../controllers/userController.js';
 
 const router = express.Router();
 
-// All routes defined here are protected and require a valid user session
-router.use(protect);
+router.route('/')
+    .get(getAllUsers);
 
-router.get('/', getAllUsers); // Route: GET /api/users
-router.get('/:userid', getUserById); // Route: GET /api/users/some-clerk-id
-router.patch('/:userid', updateUser); // Route: PATCH /api/users/some-clerk-id
+router.route('/:userid')
+    .get(getUserById)
+    .patch(protect, updateUser)
+    .delete(protect, deleteUser);
 
 export default router;
