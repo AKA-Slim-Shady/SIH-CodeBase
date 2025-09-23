@@ -13,12 +13,11 @@ const Post = sequelize.define('Post', {
         allowNull: false,
     },
     location: {
-        type: DataTypes.STRING,
+        type: DataTypes.JSON,  // ✅ changed from STRING to JSON
+        allowNull: true,       // optional field
     },
 }, {
     timestamps: true
 });
-
-// All association logic has been moved to server.js
 
 export default Post;

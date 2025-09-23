@@ -12,6 +12,7 @@ import {
     unlikePost,
     getPostDept,
 } from '../controllers/postController.js';
+// import { upload } from '../middlewares/uploadMiddleware.js'; // ❌ remove this
 
 const router = express.Router();
 
@@ -29,8 +30,8 @@ router.route('/dept/:postid')
 
 // Routes for creating and getting all posts -> /api/posts
 router.route('/')
-    .get(getAllPosts)
-    .post(createPost);
+  .get(getAllPosts)
+  .post(createPost); // ❌ remove upload middleware
 
 // Routes for a specific post -> /api/posts/:postid
 router.route('/:postid')

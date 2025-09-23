@@ -3,10 +3,10 @@ import { colors, spacing, typography } from "../theme/theme";
 
 export default function ReportForm() {
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
   const [location, setLocation] = useState(null);
 
+  // Get initial geolocation
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -20,32 +20,50 @@ export default function ReportForm() {
     }
   }, []);
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setPreview(URL.createObjectURL(e.target.files[0]));
-    }
+  // Generate a random nearby location
+  const randomizeLocation = () => {
+    if (!location) return;
+
+    const randomOffset = () => (Math.random() - 0.5) / 100; // ~±0.005 degrees (~500m)
+    setLocation((prev) => ({
+      latitude: prev.latitude + randomOffset(),
+      longitude: prev.longitude + randomOffset(),
+    }));
   };
 
   const handleSubmit = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("description", description);
-      if (location) formData.append("location", JSON.stringify(location));
-      if (file) formData.append("image", file);
+    if (!description || !imageUrl) {
+      return alert("Description and image URL are required!");
+    }
 
-      const res = await fetch("http://<YOUR_BACKEND_URL>/api/posts", {
+    try {
+      const token = localStorage.getItem("token");
+
+      let locationString = null;
+      if (location) {
+        locationString = `${location.latitude},${location.longitude}`;
+      }
+
+      const res = await fetch("http://localhost:5000/api/posts", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          desc: description,
+          img: imageUrl,
+          location: locationString,
+        }),
       });
 
       if (res.ok) {
         alert("Report submitted!");
         setDescription("");
-        setFile(null);
-        setPreview(null);
+        setImageUrl("");
       } else {
-        alert("Failed to submit report");
+        const errData = await res.json();
+        alert(errData.message || "Failed to submit report");
       }
     } catch (err) {
       console.error(err);
@@ -64,9 +82,16 @@ export default function ReportForm() {
         boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
       }}
     >
-      <h2 style={{ fontFamily: typography.font, fontSize: typography.title, marginBottom: spacing.m }}>
+      <h2
+        style={{
+          fontFamily: typography.font,
+          fontSize: typography.title,
+          marginBottom: spacing.m,
+        }}
+      >
         Report an Issue
       </h2>
+
       <textarea
         style={{
           width: "100%",
@@ -81,29 +106,60 @@ export default function ReportForm() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <input type="file" accept="image/*" onChange={handleFileChange} />
-      {preview && (
-        <img
-          src={preview}
-          alt="preview"
-          style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 8, marginTop: spacing.s }}
-        />
-      )}
-      <button
-        onClick={handleSubmit}
+
+      <input
+        type="text"
+        placeholder="Image URL"
+        value={imageUrl}
+        onChange={(e) => setImageUrl(e.target.value)}
         style={{
-          backgroundColor: colors.primary,
-          color: "#fff",
-          border: "none",
+          width: "100%",
           padding: spacing.m,
+          marginBottom: spacing.m,
           borderRadius: 8,
-          cursor: "pointer",
-          fontWeight: 600,
-          marginTop: spacing.m,
+          border: `1px solid ${colors.border}`,
         }}
-      >
-        Submit Report
-      </button>
+      />
+
+      <div style={{ display: "flex", gap: 8, marginTop: spacing.m }}>
+        <button
+          onClick={handleSubmit}
+          style={{
+            flex: 1,
+            backgroundColor: colors.primary,
+            color: "#fff",
+            border: "none",
+            padding: spacing.m,
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Submit Report
+        </button>
+
+        <button
+          onClick={randomizeLocation}
+          style={{
+            flex: 1,
+            backgroundColor: "#666",
+            color: "#fff",
+            border: "none",
+            padding: spacing.m,
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Randomize Location
+        </button>
+      </div>
+
+      {location && (
+        <p style={{ marginTop: spacing.m, fontSize: 14, color: "#333" }}>
+          Current location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+        </p>
+      )}
     </div>
   );
 }

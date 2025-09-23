@@ -8,12 +8,16 @@ import User from '../models/userModel.js';
 
 export const createPost = async (req, res) => {
     const { img, desc, location } = req.body;
+
     if (!img || !desc) {
         return res.status(400).json({ message: 'Image and description are required.' });
     }
+
     try {
         const userId = req.user.id;
-        const newPost = await Post.create({ img, desc, location, userId: userId });
+
+        // store location directly as object
+        const newPost = await Post.create({ img, desc, location, userId });
         res.status(201).json(newPost);
     } catch (error) {
         console.error('Error creating post:', error);
@@ -22,20 +26,16 @@ export const createPost = async (req, res) => {
 };
 
 export const getAllPosts = async (req, res) => {
-    const { loc } = req.query;
-    const whereClause = {};
-    if (loc) { whereClause.location = { [Op.iLike]: `%${loc}%` }; }
-    try {
-        const posts = await Post.findAll({
-            where: whereClause,
-            order: [['createdAt', 'DESC']],
-            include: { model: User, attributes: ['name', 'userpic'] }
-        });
-        res.status(200).json(posts);
-    } catch (error) {
-        console.error('Error fetching posts:', error);
-        res.status(500).json({ error: 'Failed to fetch posts' });
-    }
+  try {
+    const posts = await Post.findAll({
+      order: [["createdAt", "DESC"]],
+      include: { model: User, attributes: ["name", "userpic"] },
+    });
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    res.status(500).json({ error: "Failed to fetch posts" });
+  }
 };
 
 export const getPostById = async (req, res) => {

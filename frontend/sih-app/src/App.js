@@ -3,15 +3,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import MapFeed from "./pages/MapFeed";
 import ReportForm from "./pages/ReportForm";
 import Dashboard from "./pages/Dashboard";
-import Users from "./pages/Users";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NavBar from "./components/NavBar";
+import UserPage from "./pages/UserPage";
 
 export default function App() {
   const [user, setUser] = useState(null);
 
-  // Optional: persist user login from localStorage
+  // Persist user login from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("user");
     if (saved) setUser(JSON.parse(saved));
@@ -36,15 +36,12 @@ export default function App() {
           <Route path="/report" element={<ReportForm />} />
           <Route path="/signin" element={<SignIn onLogin={handleLogin} />} />
           <Route path="/signup" element={<SignUp onLogin={handleLogin} />} />
-          
-          {/* Admin routes */}
+          <Route path="/user" element={user ? <UserPage /> : <Navigate to="/signin" />} />
+
+          {/* Admin route */}
           <Route
             path="/dashboard"
             element={user?.isAdmin ? <Dashboard /> : <Navigate to="/signin" />}
-          />
-          <Route
-            path="/users"
-            element={user?.isAdmin ? <Users /> : <Navigate to="/signin" />}
           />
 
           {/* Catch-all */}

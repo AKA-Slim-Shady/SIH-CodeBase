@@ -43,6 +43,12 @@ export default function NavBar({ user, onLogout }) {
             >
               Report
             </Link>
+            <Link
+              to="/user"
+              style={{ textDecoration: "none", color: colors.primary, fontWeight: 600 }}
+            >
+              User
+            </Link>
             <button
               onClick={onLogout}
               style={{
