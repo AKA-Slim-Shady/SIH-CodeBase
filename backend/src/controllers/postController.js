@@ -42,7 +42,6 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
-
 export const getPostById = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.postid, {
