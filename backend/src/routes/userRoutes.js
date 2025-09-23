@@ -1,7 +1,6 @@
-// backend/src/routes/userRoutes.js
-
 import express from 'express';
 import { protect } from '../middlewares/authMiddleware.js';
+import { admin } from '../middlewares/adminMiddleware.js';
 import {
     getAllUsers,
     getUserById,
@@ -11,12 +10,14 @@ import {
 
 const router = express.Router();
 
+// Get all users (protected route)
 router.route('/')
-    .get(getAllUsers);
+    .get(protect, getAllUsers);
 
+// Routes for a specific user
 router.route('/:userid')
-    .get(getUserById)
-    .patch(protect, updateUser)
-    .delete(protect, deleteUser);
+    .get(protect, getUserById)
+    .patch(protect, updateUser) // User can only update their own profile (checked in controller)
+    .delete(protect, admin, deleteUser); // Only an admin can delete a user
 
 export default router;

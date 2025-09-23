@@ -53,11 +53,8 @@ export const updateUser = async (req, res) => {
     }
 };
 
+// backend/src/controllers/userController.js (deleteUser function)
 export const deleteUser = async (req, res) => {
-    if (req.user.id != req.params.userid) {
-        return res.status(403).json({ message: 'Forbidden: You can only delete your own profile.' });
-    }
-
     try {
         const user = await User.findByPk(req.params.userid);
         if (!user) {

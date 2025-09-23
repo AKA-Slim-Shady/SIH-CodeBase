@@ -1,6 +1,6 @@
 // backend/src/controllers/statusController.js
 
-import Status from '../models/statusModel.js';
+import Status from '../models/complaintStatusModel.js';
 
 // Update status
 export const updateStatus = async (req, res) => {
