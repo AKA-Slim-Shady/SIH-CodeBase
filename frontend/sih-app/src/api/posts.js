@@ -48,4 +48,20 @@ export const createPost = async (formData) => {
   return res.json();
 };
 
+export const likePost = async (postId) => {
+  const res = await fetch(`${BASE}/like/${postId}`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  return res.json();
+};
+
+export const unlikePost = async (postId) => {
+  const res = await fetch(`${BASE}/like/${postId}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  return res.json();
+};
+
 // etc. for filterPosts, likePost, dislikePost, getDeptForPost

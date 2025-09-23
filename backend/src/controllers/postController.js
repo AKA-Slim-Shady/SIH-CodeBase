@@ -3,6 +3,7 @@
 import { Op } from 'sequelize';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
+import { io } from '../server.js'; // import the io instance
 
 // ... createPost, getAllPosts, getPostById, updatePost, deletePost functions are unchanged ...
 
@@ -29,7 +30,10 @@ export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.findAll({
       order: [["createdAt", "DESC"]],
-      include: { model: User, attributes: ["name", "userpic"] },
+      include: [
+        { model: User, attributes: ["name", "userpic"] }, // post author
+        { model: User, as: "Likes", attributes: ["id", "name"] }, // users who liked
+      ],
     });
     res.status(200).json(posts);
   } catch (error) {
@@ -38,18 +42,23 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
+
 export const getPostById = async (req, res) => {
-    try {
-        const post = await Post.findByPk(req.params.postid, {
-            include: { model: User, attributes: ['name', 'userpic'] }
-        });
-        if (!post) { return res.status(404).json({ message: 'Post not found' }); }
-        res.status(200).json(post);
-    } catch (error) {
-        console.error('Error fetching post:', error);
-        res.status(500).json({ error: 'Failed to fetch post' });
-    }
+  try {
+    const post = await Post.findByPk(req.params.postid, {
+      include: [
+        { model: User, attributes: ["name", "userpic"] },
+        { model: User, as: "Likes", attributes: ["id", "name"] },
+      ],
+    });
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.status(200).json(post);
+  } catch (error) {
+    console.error("Error fetching post:", error);
+    res.status(500).json({ error: "Failed to fetch post" });
+  }
 };
+
 
 export const updatePost = async (req, res) => {
     try {
@@ -85,44 +94,49 @@ export const deletePost = async (req, res) => {
 
 
 // --- NEW FUNCTIONS FOR LIKING/UNLIKING ---
-
 export const likePost = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const user = await User.findByPk(userId);
-        const post = await Post.findByPk(req.params.postid);
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
 
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
+    const post = await Post.findByPk(req.params.postid, { include: [{ model: User, as: 'Likes', attributes: ['id', 'name'] }] });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        await post.addLike(user);
-        res.status(200).json({ message: 'Post liked successfully' });
+    await post.addLike(user);
 
-    } catch (error) {
-        console.error('Error liking post:', error);
-        res.status(500).json({ error: 'Failed to like post' });
-    }
+    const updatedPost = await Post.findByPk(post.id, { include: [{ model: User, as: 'Likes', attributes: ['id', 'name'] }] });
+
+    // Emit full array of user objects
+    io.emit('postLiked', { postId: post.id, likes: updatedPost.Likes });
+
+    res.status(200).json({ message: 'Post liked successfully', likes: updatedPost.Likes });
+  } catch (error) {
+    console.error('Error liking post:', error);
+    res.status(500).json({ error: 'Failed to like post' });
+  }
 };
 
 export const unlikePost = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const user = await User.findByPk(userId);
-        const post = await Post.findByPk(req.params.postid);
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
 
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
+    const post = await Post.findByPk(req.params.postid, { include: [{ model: User, as: 'Likes', attributes: ['id', 'name'] }] });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        await post.removeLike(user);
-        res.status(200).json({ message: 'Post unliked successfully' });
+    await post.removeLike(user);
 
-    } catch (error) {
-        console.error('Error unliking post:', error);
-        res.status(500).json({ error: 'Failed to unlike post' });
-    }
+    const updatedPost = await Post.findByPk(post.id, { include: [{ model: User, as: 'Likes', attributes: ['id', 'name'] }] });
+
+    io.emit('postUnliked', { postId: post.id, likes: updatedPost.Likes });
+
+    res.status(200).json({ message: 'Post unliked successfully', likes: updatedPost.Likes });
+  } catch (error) {
+    console.error('Error unliking post:', error);
+    res.status(500).json({ error: 'Failed to unlike post' });
+  }
 };
+
 
 // --- NEW FUNCTION FOR GETTING POST DEPARTMENT ---
 // You will need to create a Department model and establish an association between Post and Department for this to work.
