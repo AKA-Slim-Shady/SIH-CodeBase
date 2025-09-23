@@ -1,46 +1,51 @@
 const BASE = "http://localhost:5000/api/posts";
 
-export const createPost = async (formData) => {
-  const res = await fetch(BASE, { method: "POST", body: formData });
-  return res.json();
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// GET all posts
 export const getAllPosts = async () => {
-  const res = await fetch(BASE);
+  const token = localStorage.getItem("token"); // only in frontend
+  const res = await fetch(BASE, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   return res.json();
 };
 
+// GET single post
 export const getPost = async (id) => {
-  const res = await fetch(`${BASE}/${id}`);
+  const res = await fetch(`${BASE}/${id}`, { headers: getAuthHeaders() });
   return res.json();
 };
 
+// PATCH update post
 export const updatePost = async (id, data) => {
-  const res = await fetch(`${BASE}/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  const res = await fetch(`${BASE}/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify(data),
+  });
   return res.json();
 };
 
+// DELETE post
 export const deletePost = async (id) => {
-  const res = await fetch(`${BASE}/${id}`, { method: "DELETE" });
+  const res = await fetch(`${BASE}/${id}`, { method: "DELETE", headers: getAuthHeaders() });
   return res.json();
 };
 
-export const filterPosts = async (loc) => {
-  const res = await fetch(`${BASE}?loc=${loc}`);
+// POST create
+export const createPost = async (formData) => {
+  const res = await fetch(BASE, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: formData,
+  });
   return res.json();
 };
 
-export const likePost = async (id) => {
-  const res = await fetch(`${BASE}/like/${id}`, { method: "POST" });
-  return res.json();
-};
-
-export const dislikePost = async (id) => {
-  const res = await fetch(`${BASE}/like/${id}`, { method: "DELETE" });
-  return res.json();
-};
-
-export const getDeptForPost = async (id) => {
-  const res = await fetch(`${BASE}/dept/${id}`);
-  return res.json();
-};
+// etc. for filterPosts, likePost, dislikePost, getDeptForPost
