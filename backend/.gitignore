@@ -1,0 +1,8 @@
+# SIH-CODEBASE/.gitignore
+
+# Backend dependencies
+backend/node_modules/
+backend/.env
+
+# Frontend dependencies (example for React)
+frontend/node_modules/

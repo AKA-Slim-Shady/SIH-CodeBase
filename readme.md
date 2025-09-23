@@ -91,4 +91,8 @@ You must start the backend server before starting the frontend bundler.
 3.  **Launch the App:**
 
       * **Mobile:** Open the **Expo Go** app on your phone and **scan the QR code**.
+<<<<<<< HEAD
       * **Web (Testing):** Press the **`w` key** in the terminal running the Expo Bundler to open the app in your browser.
+=======
+      * **Web (Testing):** Press the **`w` key** in the terminal running the Expo Bundler to open the app in your browser.
+>>>>>>> ffbc3a7032e1bfb7c3eb89d5c5f3cb6bcc50b7e4
