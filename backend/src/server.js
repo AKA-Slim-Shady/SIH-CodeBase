@@ -1,5 +1,3 @@
-// backend/src/server.js
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -15,28 +13,62 @@ import sequelize from './config/database.js';
 import User from './models/userModel.js';
 import Post from './models/postModel.js';
 import Like from './models/likeModel.js';
-import Status from './models/statusModel.js';
+
 import Notification from './models/notificationModel.js';
+import Comment from './models/commentModel.js';
+import Department from './models/departmentModel.js';
+import ComplaintStatus from './models/complaintStatusModel.js';
 
 // --- ROUTE IMPORTS ---
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import postRoutes from './routes/postRoutes.js';
 import statusRoutes from './routes/statusRoutes.js';
+<<<<<<< HEAD
 import notificationRoutes from './routes/notificationRoutes.js'; 
+=======
+import notificationRoutes from './routes/notificationRoutes.js';
+import commentRoutes from './routes/commentRoutes.js';
+import departmentRoutes from './routes/departmentRoutes.js';
+
+>>>>>>> 85198fc (fixing controller logic)
 
 // --- DEFINE MODEL ASSOCIATIONS ---
 User.hasMany(Post, { foreignKey: 'userId' });
 Post.belongsTo(User, { foreignKey: 'userId' });
+
 User.belongsToMany(Post, { through: Like, as: 'LikedPosts', foreignKey: 'userId' });
 Post.belongsToMany(User, { through: Like, as: 'Likes', foreignKey: 'postId' });
 
+<<<<<<< HEAD
 Post.hasOne(Status, { foreignKey: 'postId' });
 Status.belongsTo(Post, { foreignKey: 'postId' });
 
 User.hasMany(Notification, { foreignKey: 'userId' });
 Notification.belongsTo(User, { foreignKey: 'userId' });
 
+=======
+// Associations for Comments
+User.hasMany(Comment, { foreignKey: 'userId' });
+Comment.belongsTo(User, { foreignKey: 'userId' });
+Post.hasMany(Comment, { foreignKey: 'postId', onDelete: 'CASCADE' });
+Comment.belongsTo(Post, { foreignKey: 'postId' });
+
+// Associations for Status and ComplaintStatus
+// Note: I've updated your `Status` model to `ComplaintStatus` based on your schema.
+Post.hasOne(ComplaintStatus, { foreignKey: 'postId' });
+ComplaintStatus.belongsTo(Post, { foreignKey: 'postId' });
+
+// Associations for Notifications
+User.hasMany(Notification, { foreignKey: 'userId' });
+Notification.belongsTo(User, { foreignKey: 'userId' });
+
+// Associations for Departments
+Department.hasMany(Post, { foreignKey: 'departmentId' });
+Post.belongsTo(Department, { foreignKey: 'departmentId' });
+
+
+>>>>>>> 85198fc (fixing controller logic)
 const app = express();
 const server = http.createServer(app);
 
@@ -66,7 +98,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/status', statusRoutes);
+<<<<<<< HEAD
 app.use('/api/notifications', notificationRoutes); 
+=======
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/departments', departmentRoutes);
+>>>>>>> 85198fc (fixing controller logic)
 
 // --- SERVER INITIALIZATION ---
 const PORT = process.env.PORT || 5000;
@@ -76,5 +114,9 @@ sequelize.sync().then(() => {
     console.log(`Server running on port ${PORT}`);
   });
 }).catch(err => {
+<<<<<<< HEAD
   console.error('Unable to sync database:', err);
+=======
+    console.error('Unable to sync database:', err);
+>>>>>>> 85198fc (fixing controller logic)
 });

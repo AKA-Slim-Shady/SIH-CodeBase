@@ -1,5 +1,3 @@
-// backend/src/middlewares/authMiddleware.js
-
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 
@@ -14,15 +12,20 @@ export const protect = async (req, res, next) => {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Attach user to the request
-            req.user = await User.findByPk(decoded.id, { attributes: ['id', 'name', 'email'] });
+            // Attach user to the request, including the isAdmin flag
+            req.user = await User.findByPk(decoded.id, { attributes: ['id', 'name', 'email', 'isAdmin'] });
+            
+            // Check if user was found
+            if (!req.user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
             next();
         } catch (error) {
             console.error(error);
             res.status(401).json({ message: 'Not authorized, token failed' });
         }
-    }
-    if (!token) {
+    } else {
         res.status(401).json({ message: 'Not authorized, no token' });
     }
 };
