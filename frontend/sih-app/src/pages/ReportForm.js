@@ -3,14 +3,21 @@ import { colors, spacing, typography } from "../theme/theme";
 
 export default function ReportForm() {
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [file, setFile] = useState(null);
   const [location, setLocation] = useState(null);
   const [message, setMessage] = useState({ text: "", isError: false });
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Use a ref to store the initial location so it doesn't get updated on re-renders
+  const cloudinaryCloudName = "dlcimnrkc";
+  const cloudinaryUploadPreset = "sih-app";
+
+  // --- ADDED DEBUGGING LOGS ---
+  console.log("Cloudinary Cloud Name:", cloudinaryCloudName);
+  console.log("Cloudinary Upload Preset:", cloudinaryUploadPreset);
+  // --- END OF DEBUGGING LOGS ---
+
   const initialLocation = useRef(null);
 
-  // Get initial geolocation
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -32,23 +39,56 @@ export default function ReportForm() {
     }
   }, []);
 
-  // Generate a random nearby location
   const randomizeLocation = () => {
     if (!initialLocation.current) {
       setMessage({ text: "Please allow location access first.", isError: true });
       return;
     }
 
-    const randomOffset = () => (Math.random() - 0.5) / 1000; // a very small offset for a nearby location
+    const randomOffset = () => (Math.random() - 0.5) / 1000;
     setLocation((prev) => ({
       latitude: initialLocation.current.latitude + randomOffset(),
       longitude: initialLocation.current.longitude + randomOffset(),
     }));
   };
 
+  const uploadToCloudinary = async () => {
+    if (!file || !cloudinaryCloudName || !cloudinaryUploadPreset) {
+      setMessage({ text: "Cloudinary configuration is missing. Please check your .env file.", isError: true });
+      return null;
+    }
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", cloudinaryUploadPreset);
+
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json();
+      setIsUploading(false);
+      return data.secure_url;
+    } catch (err) {
+      setIsUploading(false);
+      console.error("Cloudinary upload error:", err);
+      setMessage({ text: "Failed to upload image. Please try again.", isError: true });
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!description || !imageUrl) {
-      setMessage({ text: "Description and image URL are required!", isError: true });
+    if (!description || !file) {
+      setMessage({ text: "Description and an image file are required!", isError: true });
+      return;
+    }
+
+    const imageUrl = await uploadToCloudinary();
+    if (!imageUrl) {
       return;
     }
 
@@ -80,7 +120,8 @@ export default function ReportForm() {
       if (res.ok) {
         setMessage({ text: "Report submitted successfully!", isError: false });
         setDescription("");
-        setImageUrl("");
+        setFile(null);
+        document.getElementById("fileInput").value = null;
       } else {
         const errData = await res.json();
         setMessage({ text: errData.message || "Failed to submit report", isError: true });
@@ -134,10 +175,10 @@ export default function ReportForm() {
       />
 
       <input
-        type="text"
-        placeholder="Image URL"
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
+        type="file"
+        accept="image/*"
+        id="fileInput"
+        onChange={(e) => setFile(e.target.files[0])}
         style={{
           width: "100%",
           padding: spacing.m,
@@ -150,22 +191,24 @@ export default function ReportForm() {
       <div style={{ display: "flex", gap: 8, marginTop: spacing.m }}>
         <button
           onClick={handleSubmit}
+          disabled={isUploading}
           style={{
             flex: 1,
-            backgroundColor: colors.primary,
+            backgroundColor: isUploading ? '#ccc' : colors.primary,
             color: "#fff",
             border: "none",
             padding: spacing.m,
             borderRadius: 8,
-            cursor: "pointer",
+            cursor: isUploading ? 'not-allowed' : 'pointer',
             fontWeight: 600,
           }}
         >
-          Submit Report
+          {isUploading ? 'Uploading...' : 'Submit Report'}
         </button>
 
         <button
           onClick={randomizeLocation}
+          disabled={isUploading}
           style={{
             flex: 1,
             backgroundColor: "#666",
