@@ -1,4 +1,3 @@
-// backend/src/server.js
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -9,7 +8,7 @@ dotenv.config();
 import { connectDB } from './config/database.js';
 import sequelize from './config/database.js';
 
-// models (no associations in model files)
+// ---- VITAL: Ensure all model imports are present at the top ----
 import User from './models/userModel.js';
 import Post from './models/postModel.js';
 import Like from './models/likeModel.js';
@@ -33,41 +32,41 @@ const server = http.createServer(app);
 // socket.io
 export const io = new Server(server, { cors: { origin: '*' } });
 
+// Real-time logic for joining user-specific rooms
 io.on('connection', socket => {
-  console.log(`New client connected: ${socket.id}`);
-  socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`));
+  // --- UPGRADE: More detailed logging ---
+  console.log(`[Socket.io] New client connected: ${socket.id}`);
+
+  socket.on('join_room', (userId) => {
+    if (userId) {
+        socket.join(userId.toString());
+        // --- UPGRADE: Detailed log to confirm a user has joined their room ---
+        console.log(`[Socket.io] Socket ${socket.id} joined private room for user: ${userId}`);
+    }
+  });
+
+  socket.on('disconnect', () => console.log(`[Socket.io] Client disconnected: ${socket.id}`));
 });
 
 // ---- ASSOCIATIONS (single place) ----
-// User - Post
 User.hasMany(Post, { foreignKey: 'userId' });
 Post.belongsTo(User, { foreignKey: 'userId' });
-
-// Likes: join table Like
 User.belongsToMany(Post, { through: Like, as: 'LikedPosts', foreignKey: 'userId' });
 Post.belongsToMany(User, { through: Like, as: 'Likes', foreignKey: 'postId' });
-
-// Comments
 User.hasMany(Comment, { foreignKey: 'userId' });
 Comment.belongsTo(User, { foreignKey: 'userId' });
 Post.hasMany(Comment, { foreignKey: 'postId', onDelete: 'CASCADE' });
 Comment.belongsTo(Post, { foreignKey: 'postId' });
-
-// ComplaintStatus
 Post.hasOne(ComplaintStatus, { foreignKey: 'postId' });
 ComplaintStatus.belongsTo(Post, { foreignKey: 'postId' });
-
-// Notifications
 User.hasMany(Notification, { foreignKey: 'userId' });
 Notification.belongsTo(User, { foreignKey: 'userId' });
-
-// Department
 Department.hasMany(Post, { foreignKey: 'departmentId' });
 Post.belongsTo(Department, { foreignKey: 'departmentId' });
 
+
 // ---- DB connect & middlewares ----
 connectDB();
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -81,11 +80,12 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/departments', departmentRoutes);
 
+
 // ---- sync & start (dev) ----
-// Use { alter: true } once to update columns without dropping data. Remove for production or replace with migrations.
 const PORT = process.env.PORT || 5000;
 sequelize.sync({ alter: true }).then(() => {
   server.listen(PORT, () => console.log(`Server running on ${PORT}`));
 }).catch(err => {
   console.error('Unable to sync database:', err);
 });
+

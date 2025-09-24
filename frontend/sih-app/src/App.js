@@ -7,24 +7,39 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NavBar from "./components/NavBar";
 import UserPage from "./pages/UserPage";
+import FeedbackForm from "./pages/FeedbackForm";
 
 export default function App() {
   const [user, setUser] = useState(null);
-
-  // Persist user login from localStorage
+  console.log("ENV : " , process.env.REACT_APP_VAR);
   useEffect(() => {
-    const saved = localStorage.getItem("user");
-    if (saved) setUser(JSON.parse(saved));
+    try {
+        const saved = localStorage.getItem("user");
+        if (saved) {
+            setUser(JSON.parse(saved));
+        }
+    } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        localStorage.removeItem("user");
+    }
   }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
+    // --- 👇 THE FIX: Explicitly save the token to localStorage ---
+    if (userData && userData.token) {
+        localStorage.setItem("token", userData.token);
+    }
+    // --- 👆 END FIX ---
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    // --- 👇 THE FIX: Also remove the token on logout ---
+    localStorage.removeItem("token");
+    // --- 👆 END FIX ---
   };
 
   return (
@@ -32,22 +47,23 @@ export default function App() {
       <NavBar user={user} onLogout={handleLogout} />
       <main style={{ paddingTop: 16 }}>
         <Routes>
-          <Route path="/" element={<MapFeed />} />
-          <Route path="/report" element={<ReportForm />} />
+          <Route path="/" element={<MapFeed user={user} />} />
+          <Route path="/report" element={user ? <ReportForm /> : <Navigate to="/signin" />} />
           <Route path="/signin" element={<SignIn onLogin={handleLogin} />} />
           <Route path="/signup" element={<SignUp onLogin={handleLogin} />} />
           <Route path="/user" element={user ? <UserPage /> : <Navigate to="/signin" />} />
-
-          {/* Admin route */}
           <Route
             path="/dashboard"
             element={user?.isAdmin ? <Dashboard /> : <Navigate to="/signin" />}
           />
-
-          {/* Catch-all */}
+          <Route 
+            path="/feedback/:postId" 
+            element={user ? <FeedbackForm /> : <Navigate to="/signin" />} 
+          />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
     </Router>
   );
 }
+

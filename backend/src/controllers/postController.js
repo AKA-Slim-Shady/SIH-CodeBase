@@ -238,3 +238,21 @@ export const getPostDept = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch post department' });
     }
 };
+
+export const getMyPosts = async (req, res) => {
+    try {
+        const userId = req.user.id; // Get user ID from the protect middleware
+        const posts = await Post.findAll({
+            where: { userId: userId },
+            order: [['createdAt', 'DESC']],
+            // Optionally include other models if needed on the dashboard
+            include: [
+                { model: User, attributes: ["id", "name"] },
+            ],
+        });
+        res.status(200).json(posts || []); // Ensure an array is always returned
+    } catch (error) {
+        console.error("Error fetching user's posts:", error);
+        res.status(500).json({ error: "Failed to fetch user's posts" });
+    }
+};

@@ -1,27 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { colors, typography, spacing } from "../theme/theme";
-import { loginUser } from "../api/auth"; // ✅ correct import
+import { loginUser } from "../api/auth";
 
-export default function SignIn() {
+// We need to accept the onLogin function from App.js as a prop
+export default function SignIn({ onLogin }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = async () => {
-  try {
-    const res = await loginUser({ email, password });
+    try {
+      const res = await loginUser({ email, password });
 
-    // save token and user info
-    localStorage.setItem("token", res.token);
-    localStorage.setItem("user", JSON.stringify(res));
+      // THE FIX: Instead of setting localStorage here, we call the onLogin function
+      // passed down from App.js. This will update the state in the parent component.
+      onLogin(res);
 
-    // redirect to map feed for normal users
-    navigate("/"); 
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Login failed");
-  }
+      // redirect to map feed for normal users
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      // It's better to display errors in the UI, but alert is fine for now.
+      alert(err.message || "Login failed");
+    }
   };
 
   return (
