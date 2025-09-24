@@ -1,20 +1,20 @@
 // backend/src/controllers/departmentController.js
 
+// backend/src/controllers/departmentController.js
 import Department from '../models/departmentModel.js';
 
-// Create a new department (Admin only)
 export const createDepartment = async (req, res) => {
-    const { name, description } = req.body;
-    if (!name) {
-        return res.status(400).json({ message: 'Department name is required.' });
-    }
-
     try {
-        const newDepartment = await Department.create({ name, description });
-        res.status(201).json(newDepartment);
+        const { name, latitude, longitude } = req.body;
+
+        if (!name || !latitude || !longitude) {
+            return res.status(400).json({ message: "Name, latitude and longitude are required" });
+        }
+
+        const department = await Department.create({ name, latitude, longitude });
+        res.status(201).json(department);
     } catch (error) {
-        console.error('Error creating department:', error);
-        res.status(500).json({ error: 'Failed to create department' });
+        res.status(500).json({ message: error.message });
     }
 };
 

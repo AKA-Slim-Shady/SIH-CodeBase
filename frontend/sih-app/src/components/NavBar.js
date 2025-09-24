@@ -49,6 +49,17 @@ export default function NavBar({ user, onLogout }) {
             >
               User
             </Link>
+
+            {/* Render Admin Dashboard link only if user is admin */}
+            {user.isAdmin && (
+              <Link
+              to="/dashboard"   // 👈 change this to the route where Dashboard.js is mounted
+              style={{ textDecoration: "none", color: colors.primary, fontWeight: 600 }}
+              >
+                Admin Dashboard
+              </Link>
+            )}
+            
             <button
               onClick={onLogout}
               style={{

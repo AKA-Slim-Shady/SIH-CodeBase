@@ -2,12 +2,19 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { getAllPosts, likePost, unlikePost } from "../api/posts";
-import { io } from "socket.io-client";
+import { getStatus } from "../api/status"; 
+import { io as ioClient } from "socket.io-client";
+import CommentsSection from "../components/CommentsSection"; 
 
-// --- Socket.IO client
-const socket = io("http://localhost:5000"); // adjust backend URL
+const socket = ioClient("http://localhost:5000");
 
-// Helper component to auto-fit map to markers
+// Define colors for each status
+const STATUS_COLORS = {
+  'Issue identified': '#FFD700', // Yellow
+  'Issue being worked on': '#4169E1', // Blue
+  'Issue resolved': '#32CD32', // Green
+};
+
 function FitBounds({ markers }) {
   const map = useMap();
   useEffect(() => {
@@ -29,40 +36,49 @@ export default function MapFeed() {
     const saved = localStorage.getItem("user");
     if (saved) setUserId(JSON.parse(saved).id);
 
-    async function fetchIssues() {
+    const fetchIssues = async () => {
       try {
         const data = await getAllPosts();
         if (Array.isArray(data)) {
-          const parsedIssues = data
-            .map(issue => {
-              let loc = { latitude: null, longitude: null };
-              if (issue.location && typeof issue.location === "string") {
-                const parts = issue.location.split(",");
-                if (parts.length === 2) {
-                  const lat = parseFloat(parts[0]);
-                  const lng = parseFloat(parts[1]);
-                  if (!isNaN(lat) && !isNaN(lng)) loc = { latitude: lat, longitude: lng };
-                }
-              }
-              return { ...issue, location: loc };
-            })
-            .filter(issue => issue.location.latitude != null && issue.location.longitude != null);
+          const processedIssues = [];
+          for (const post of data) {
+            let loc = { latitude: null, longitude: null };
+            // Ensure location data is a string before attempting to parse
+            if (post.location && typeof post.location === "string") {
+              const [a, b] = post.location.split(",").map(s => s && s.trim());
+              const lat = parseFloat(a);
+              const lng = parseFloat(b);
+              if (!isNaN(lat) && !isNaN(lng)) loc = { latitude: lat, longitude: lng };
+            }
 
-          setIssues(parsedIssues);
+            // Skip posts with invalid location data to prevent errors
+            if (loc.latitude == null || loc.longitude == null) {
+              continue;
+            }
+
+            const likes = Array.isArray(post.Likes) ? post.Likes : [];
+            let status = 'Pending';
+            try {
+              const statusData = await getStatus(post.id);
+              status = statusData.status;
+            } catch (err) {
+              console.error(`Failed to fetch status for post ${post.id}:`, err);
+            }
+            
+            processedIssues.push({ ...post, location: loc, likes, status });
+          }
+          setIssues(processedIssues);
         }
       } catch (err) {
         console.error("Failed to fetch posts:", err);
-        setIssues([]);
       }
-    }
+    };
 
     fetchIssues();
 
-    // --- WebSocket listeners for live likes/unlikes ---
     socket.on("postLiked", ({ postId, likes }) => {
       setIssues(prev => prev.map(p => p.id === postId ? { ...p, likes } : p));
     });
-
     socket.on("postUnliked", ({ postId, likes }) => {
       setIssues(prev => prev.map(p => p.id === postId ? { ...p, likes } : p));
     });
@@ -75,67 +91,47 @@ export default function MapFeed() {
 
   const handleLike = async (issue) => {
     try {
-      const isLiked = issue.likes?.some(like => like.id === userId);
+      const isLiked = (issue.likes || []).some(u => u.id === userId);
       if (isLiked) {
         await unlikePost(issue.id);
       } else {
         await likePost(issue.id);
       }
-      // actual state updates come from websocket events
     } catch (err) {
-      console.error("Error liking/unliking post:", err);
+      console.error("Error liking/unliking:", err);
     }
   };
 
   return (
     <div style={{ height: "90vh", width: "100%", maxWidth: 1200, margin: "auto", marginTop: 16 }}>
       <MapContainer center={userLocation} zoom={14} style={{ height: "100%", width: "100%" }}>
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <FitBounds markers={issues} />
         {issues.map(issue => {
-          const isLiked = issue.likes?.some(like => like.id === userId);
+          const isLiked = (issue.likes || []).some(u => u.id === userId);
           return (
-            <CircleMarker
-              key={issue.id}
+            <CircleMarker key={issue.id}
               center={[issue.location.latitude, issue.location.longitude]}
               radius={8}
-              fillColor={isLiked ? "red" : "gray"}
-              color="darkred"
-              weight={1}
-              fillOpacity={0.8}
-            >
+              fillColor={STATUS_COLORS[issue.status] || 'gray'} // Use status for color
+              color="darkred" weight={1} fillOpacity={0.9}>
               <Popup>
-                <div style={{ maxWidth: 200 }}>
-                  <strong>{issue.desc}</strong>
-                  <br />
-                  {issue.img && <img src={issue.img} alt={issue.desc} style={{ width: "100%", height: "100px", objectFit: "cover", marginTop: 4 }} />}
-                  <br />
-                  Reported by: {issue.User?.name || "Unknown"}
-                  <br />
-                  {issue.location.latitude.toFixed(6)}, {issue.location.longitude.toFixed(6)}
-                  <br />
-                  Created at: {new Date(issue.createdAt).toLocaleString()}
-                  <br />
-                  Likes: {issue.likes?.length || 0}
-                  <br />
-                  <button
-                    style={{
-                      marginTop: 4,
-                      padding: "4px 8px",
-                      backgroundColor: isLiked ? "red" : "#ccc",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      transition: "background-color 0.3s",
-                    }}
-                    onClick={() => handleLike(issue)}
-                  >
-                    {isLiked ? "Unlike" : "Like"}
+                <div style={{ maxWidth: 260 }}>
+                  <strong>{issue.desc}</strong><br/>
+                  {issue.img && <img src={issue.img} style={{ width: "100%", height: 100, objectFit: "cover" }} />}
+                  <br/>Reported by: {issue.User?.name || 'Unknown'}
+                  <br/>Status: <strong>{issue.status || 'Pending'}</strong>
+                  <br/>{issue.location.latitude.toFixed(6)}, {issue.location.longitude.toFixed(6)}
+                  <br/>Likes: {(issue.likes || []).length}
+                  <br/>
+                  <button 
+                    onClick={() => handleLike(issue)} 
+                    style={{ background: isLiked ? 'red' : '#ccc', color: '#fff', padding: '6px 10px', border: 'none', borderRadius: 6 }}>
+                    {isLiked ? 'Unlike' : 'Like'}
                   </button>
+
+                  {/* Comments Section */}
+                  <CommentsSection postId={issue.id} userId={userId} />
                 </div>
               </Popup>
             </CircleMarker>

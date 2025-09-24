@@ -1,5 +1,3 @@
-// backend/src/controllers/statusController.js
-
 import Status from '../models/complaintStatusModel.js';
 
 // Update status
@@ -7,8 +5,9 @@ export const updateStatus = async (req, res) => {
     const { postid } = req.params;
     const { status } = req.body;
     try {
+        // Ensure postid is an integer for database operations
         const [statusRecord, created] = await Status.findOrCreate({
-            where: { postId: postid },
+            where: { postId: parseInt(postid, 10) },
             defaults: { status: status },
         });
 
@@ -26,8 +25,9 @@ export const updateStatus = async (req, res) => {
 export const getStatus = async (req, res) => {
     const { postid } = req.params;
     try {
+        // Ensure postid is an integer for database operations
         const statusRecord = await Status.findOne({
-            where: { postId: postid }
+            where: { postId: parseInt(postid, 10) }
         });
 
         if (!statusRecord) {

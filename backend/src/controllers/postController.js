@@ -1,11 +1,53 @@
 // backend/src/controllers/postController.js
-
 import { Op } from 'sequelize';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
+import Department from '../models/departmentModel.js';
 import { io } from '../server.js'; // import the io instance
 
-// ... createPost, getAllPosts, getPostById, updatePost, deletePost functions are unchanged ...
+// Helper: parse "lat,lng" or JSON string into { latitude, longitude } or null
+function parseLocation(loc) {
+  if (!loc) return null;
+  // If already stored as JSON string like '{"latitude":..., "longitude":...}'
+  if (typeof loc === 'object' && loc.latitude !== undefined && loc.longitude !== undefined) {
+    return { latitude: Number(loc.latitude), longitude: Number(loc.longitude) };
+  }
+  if (typeof loc === 'string') {
+    // try JSON first
+    try {
+      const obj = JSON.parse(loc);
+      if (obj && obj.latitude !== undefined && obj.longitude !== undefined) {
+        return { latitude: Number(obj.latitude), longitude: Number(obj.longitude) };
+      }
+    } catch (e) {
+      // not JSON, try "lat,lng"
+      const parts = loc.split(',');
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
+      }
+    }
+  }
+  return null;
+}
+
+// Haversine distance in kilometers
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// ----------------- existing controllers (createPost etc) -----------------
+// (keep your other functions as-is; below we only replace/implement getAllPosts, and ensure getPostDept import exists)
 
 export const createPost = async (req, res) => {
     const { img, desc, location } = req.body;
@@ -17,7 +59,7 @@ export const createPost = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // store location directly as object
+        // store location directly as object/string
         const newPost = await Post.create({ img, desc, location, userId });
         res.status(201).json(newPost);
     } catch (error) {
@@ -28,20 +70,69 @@ export const createPost = async (req, res) => {
 
 export const getAllPosts = async (req, res) => {
   try {
+    const { lat, lng, radiusKm = 5, sort } = req.query;
+
+    // Fetch posts with author and Likes
     const posts = await Post.findAll({
       order: [["createdAt", "DESC"]],
       include: [
-        { model: User, attributes: ["name", "userpic"] }, // post author
-        { model: User, as: "Likes", attributes: ["id", "name"] }, // users who liked
+        { model: User, attributes: ["id", "name"] },
+        { model: User, as: "Likes", attributes: ["id", "name"] },
       ],
     });
-    res.status(200).json(posts);
+
+    const mapped = posts.map((p) => {
+      const plain = p.toJSON ? p.toJSON() : p;
+      let parsedLocation = parseLocation(plain.location);
+
+      // ensure frontend-safe location string
+      let locationStr = plain.location;
+      if (!locationStr && parsedLocation) {
+        locationStr = `${parsedLocation.latitude},${parsedLocation.longitude}`;
+      }
+
+      return {
+        ...plain,
+        location: locationStr,
+        locationParsed: parsedLocation,
+        likesCount: Array.isArray(plain.Likes) ? plain.Likes.length : 0,
+      };
+    });
+
+    // filter by distance if lat/lng provided
+    let filtered = mapped;
+    if (lat && lng) {
+      const centerLat = parseFloat(lat);
+      const centerLng = parseFloat(lng);
+      const r = Number(radiusKm) || 5;
+
+      filtered = filtered.filter((p) => {
+        if (!p.locationParsed) return false;
+        const d = haversineKm(
+          centerLat,
+          centerLng,
+          p.locationParsed.latitude,
+          p.locationParsed.longitude
+        );
+        return d <= r;
+      });
+    }
+
+    // sort by likes if requested
+    if (sort === "asc") filtered.sort((a, b) => a.likesCount - b.likesCount);
+    else if (sort === "desc") filtered.sort((a, b) => b.likesCount - a.likesCount);
+    else filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // always return array
+    res.status(200).json(filtered || []);
   } catch (error) {
     console.error("Error fetching posts:", error);
     res.status(500).json({ error: "Failed to fetch posts" });
   }
 };
 
+
+// ----------------- rest of file (getPostById, update, delete, like/unlike, getPostDept) -----------------
 export const getPostById = async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.postid, {
@@ -57,7 +148,6 @@ export const getPostById = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch post" });
   }
 };
-
 
 export const updatePost = async (req, res) => {
     try {
@@ -136,16 +226,13 @@ export const unlikePost = async (req, res) => {
   }
 };
 
-
-// --- NEW FUNCTION FOR GETTING POST DEPARTMENT ---
-// You will need to create a Department model and establish an association between Post and Department for this to work.
 export const getPostDept = async (req, res) => {
     try {
         const post = await Post.findByPk(req.params.postid, {
-            include: { model: Department } // Assuming Department is your model name
+            include: { model: Department }
         });
         if (!post) { return res.status(404).json({ message: 'Post not found' }); }
-        res.status(200).json(post.Department); // Send back the associated department
+        res.status(200).json(post.Department);
     } catch (error) {
         console.error('Error fetching post department:', error);
         res.status(500).json({ error: 'Failed to fetch post department' });

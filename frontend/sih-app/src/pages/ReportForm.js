@@ -1,43 +1,63 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { colors, spacing, typography } from "../theme/theme";
 
 export default function ReportForm() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [location, setLocation] = useState(null);
+  const [message, setMessage] = useState({ text: "", isError: false });
+
+  // Use a ref to store the initial location so it doesn't get updated on re-renders
+  const initialLocation = useRef(null);
 
   // Get initial geolocation
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          setLocation({
+        (pos) => {
+          const newLoc = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
-          }),
-        () => alert("Location access denied.")
+          };
+          setLocation(newLoc);
+          initialLocation.current = newLoc;
+        },
+        (err) => {
+          setMessage({ text: "Location access denied. Please enable it to use this feature.", isError: true });
+          console.error(err);
+        }
       );
+    } else {
+      setMessage({ text: "Geolocation is not supported by this browser.", isError: true });
     }
   }, []);
 
   // Generate a random nearby location
   const randomizeLocation = () => {
-    if (!location) return;
+    if (!initialLocation.current) {
+      setMessage({ text: "Please allow location access first.", isError: true });
+      return;
+    }
 
-    const randomOffset = () => (Math.random() - 0.5) / 100; // ~±0.005 degrees (~500m)
+    const randomOffset = () => (Math.random() - 0.5) / 1000; // a very small offset for a nearby location
     setLocation((prev) => ({
-      latitude: prev.latitude + randomOffset(),
-      longitude: prev.longitude + randomOffset(),
+      latitude: initialLocation.current.latitude + randomOffset(),
+      longitude: initialLocation.current.longitude + randomOffset(),
     }));
   };
 
   const handleSubmit = async () => {
     if (!description || !imageUrl) {
-      return alert("Description and image URL are required!");
+      setMessage({ text: "Description and image URL are required!", isError: true });
+      return;
     }
 
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        setMessage({ text: "You must be logged in to submit a report.", isError: true });
+        return;
+      }
 
       let locationString = null;
       if (location) {
@@ -58,16 +78,16 @@ export default function ReportForm() {
       });
 
       if (res.ok) {
-        alert("Report submitted!");
+        setMessage({ text: "Report submitted successfully!", isError: false });
         setDescription("");
         setImageUrl("");
       } else {
         const errData = await res.json();
-        alert(errData.message || "Failed to submit report");
+        setMessage({ text: errData.message || "Failed to submit report", isError: true });
       }
     } catch (err) {
       console.error(err);
-      alert("Error submitting report");
+      setMessage({ text: "Error submitting report", isError: true });
     }
   };
 
@@ -91,6 +111,12 @@ export default function ReportForm() {
       >
         Report an Issue
       </h2>
+
+      {message.text && (
+        <div style={{ padding: spacing.s, marginBottom: spacing.m, borderRadius: 8, backgroundColor: message.isError ? '#fee2e2' : '#dcfce7', color: message.isError ? '#dc2626' : '#16a34a' }}>
+          {message.text}
+        </div>
+      )}
 
       <textarea
         style={{
