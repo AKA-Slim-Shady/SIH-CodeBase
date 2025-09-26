@@ -34,14 +34,12 @@ export const io = new Server(server, { cors: { origin: '*' } });
 
 // Real-time logic for joining user-specific rooms
 io.on('connection', socket => {
-  // --- UPGRADE: More detailed logging ---
   console.log(`[Socket.io] New client connected: ${socket.id}`);
 
   socket.on('join_room', (userId) => {
     if (userId) {
-        socket.join(userId.toString());
-        // --- UPGRADE: Detailed log to confirm a user has joined their room ---
-        console.log(`[Socket.io] Socket ${socket.id} joined private room for user: ${userId}`);
+      socket.join(userId.toString());
+      console.log(`[Socket.io] Socket ${socket.id} joined private room for user: ${userId}`);
     }
   });
 
@@ -64,7 +62,6 @@ Notification.belongsTo(User, { foreignKey: 'userId' });
 Department.hasMany(Post, { foreignKey: 'departmentId' });
 Post.belongsTo(Department, { foreignKey: 'departmentId' });
 
-
 // ---- DB connect & middlewares ----
 connectDB();
 app.use(cors());
@@ -80,12 +77,24 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/departments', departmentRoutes);
 
+// ---- FUNCTION TO LOG DEPARTMENTS ----
+async function logDepartments() {
+  try {
+    const departments = await Department.findAll();
+    console.log('Departments in DB:');
+    console.log(departments.map(d => d.name));
+  } catch (err) {
+    console.error('Error fetching departments:', err);
+  }
+}
 
-// ---- sync & start (dev) ----
+// ---- sync & start server ----
 const PORT = process.env.PORT || 5000;
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync({ alter: true }).then(async () => {
   server.listen(PORT, () => console.log(`Server running on ${PORT}`));
+
+  // log departments after server starts
+  await logDepartments();
 }).catch(err => {
   console.error('Unable to sync database:', err);
 });
-
