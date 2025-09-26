@@ -1,38 +1,221 @@
-.App {
-  text-align: center;
+/* --- PREVIOUS STYLES --- */
+/* General App Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.main-content {
+  flex: 1;
+  overflow-y: auto;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.page-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 1.2rem;
 }
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* TopBar Styles */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 60px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+  z-index: 1050;
+}
+.top-bar-title-link { text-decoration: none; }
+.top-bar-title {
+  color: #1DA1F2;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  font-size: 1.5rem;
+}
+.top-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #657786;
+  position: relative;
+  padding: 0;
+}
+.logout-button { color: #FF4C4C; }
+/* Notification Styles */
+.notifications-container { position: relative; }
+.unread-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: red;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+.notifications-dropdown {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid #eee;
+  z-index: 1100;
+}
+.notification-item {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.notification-item.unread { font-weight: bold; background-color: #f9f9f9; }
+/* BottomNav Styles */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+}
+.bottom-nav-link {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  text-decoration: none;
+  color: #657786;
+  font-size: 0.75rem;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+.bottom-nav-link:hover { background-color: #f5f5f5; }
+.bottom-nav-link.active { color: #1DA1F2; }
+
+/* --- NEW RESPONSIVE STYLES --- */
+
+/* A container for all our page content */
+.page-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Styles for forms (SignIn, SignUp, ReportForm, FeedbackForm) */
+.form-card {
+  max-width: 500px;
+  margin: 16px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.form-card h2 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+.form-card input,
+.form-card textarea,
+.form-card select,
+.form-card button {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #E1E8ED;
+  box-sizing: border-box; /* Important for consistent sizing */
+  font-size: 1rem;
+}
+.form-card button {
+  background-color: #1DA1F2;
   color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+.form-card button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
-.App-link {
-  color: #61dafb;
+/* Styles for UserPage post cards */
+.user-post-card {
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.user-post-card img {
+  width: 100%;
+  border-radius: 4px;
+  max-height: 200px;
+  object-fit: cover;
+}
+.status-display {
+  margin: 10px 0;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+.button-group {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.button-group button, .button-group a {
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: none;
+  text-decoration: none;
+  color: white;
+  cursor: pointer;
+}
+.button-group .edit-btn { background: #6c757d; }
+.button-group .delete-btn { background: #dc3545; }
+.button-group .feedback-btn { background: #28a745; }
+
+
+/* Admin Dashboard Styles */
+.dashboard-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+  flex-wrap: wrap; /* Allow filters to wrap on small screens */
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* --- MEDIA QUERIES for Mobile Responsiveness --- */
+@media (max-width: 768px) {
+  .page-container, .form-card {
+    padding: 16px;
+    margin-top: 0;
   }
-  to {
-    transform: rotate(360deg);
+
+  .top-bar-title {
+    font-size: 1.2rem;
+  }
+  
+  .dashboard-filters {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

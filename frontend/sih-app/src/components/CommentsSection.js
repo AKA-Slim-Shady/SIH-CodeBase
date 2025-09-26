@@ -15,6 +15,7 @@ export default function CommentsSection({ postId, userId }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // ... (useEffect hook remains the same) ...
     const fetchComments = async () => {
       try {
         const data = await getComments(postId);
@@ -28,23 +29,9 @@ export default function CommentsSection({ postId, userId }) {
 
     const onCreated = ({ postId: pId, comment }) => {
       if (parseInt(pId, 10) === parseInt(postId, 10)) {
-        setComments((prev) => {
-          if (prev.some(c => c.id === comment.id)) {
-            return prev;
-          }
-          return [comment, ...prev];
-        });
+        setComments((prev) => [comment, ...prev]);
       }
     };
-
-    const onUpdated = ({ postId: pId, comment }) => {
-      if (parseInt(pId, 10) === parseInt(postId, 10)) {
-        setComments((prev) =>
-          prev.map((c) => (c.id === comment.id ? comment : c))
-        );
-      }
-    };
-
     const onDeleted = ({ postId: pId, commentId }) => {
       if (parseInt(pId, 10) === parseInt(postId, 10)) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
@@ -52,12 +39,10 @@ export default function CommentsSection({ postId, userId }) {
     };
 
     socket.on("commentCreated", onCreated);
-    socket.on("commentUpdated", onUpdated);
     socket.on("commentDeleted", onDeleted);
 
     return () => {
       socket.off("commentCreated", onCreated);
-      socket.off("commentUpdated", onUpdated);
       socket.off("commentDeleted", onDeleted);
     };
   }, [postId]);
@@ -69,37 +54,37 @@ export default function CommentsSection({ postId, userId }) {
 
     try {
       setIsPosting(true);
-      const added = await apiCreateComment(postId, {
+      // This function now returns { success: true }
+      const result = await apiCreateComment(postId, {
         content: newComment.trim(),
       });
 
-      if (added && added.id) {
-        setComments((prev) => [added, ...prev]);
-        setNewComment("");
+      // --- THE FIX: We check for the success flag ---
+      // We no longer try to add the comment to the state here.
+      // We trust the WebSocket 'commentCreated' event to do that.
+      if (result.success) {
+        setNewComment(""); // Clear the input on success
         setError(null);
       } else {
-        throw new Error("Invalid response from server.");
+        // This is a fallback, but the API should throw an error before this.
+        throw new Error("API did not confirm success.");
       }
     } catch (err) {
       console.error("Error creating comment:", err);
-      setError("Could not post comment.");
+      setError(err.message || "Could not post comment."); // Use the specific error message
     } finally {
       setIsPosting(false);
     }
   };
 
   const handleDelete = async (commentId) => {
-    const token = localStorage.getItem("token");
-    if (!token) return alert("You must be signed in to delete your comment.");
+    // ... (handleDelete function remains the same) ...
     if (!window.confirm("Delete this comment?")) return;
-
     try {
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
       await apiDeleteComment(postId, commentId);
+      // The WebSocket 'commentDeleted' event will handle removing it from state.
     } catch (err) {
       console.error("Error deleting comment:", err);
-      const data = await getComments(postId);
-      if (Array.isArray(data)) setComments(data);
       alert("Could not delete comment.");
     }
   };
@@ -123,19 +108,12 @@ export default function CommentsSection({ postId, userId }) {
           </p>
         ) : (
           comments.map((c) => (
-            <div key={c.id} style={{ marginBottom: 8 }}>
+            <div key={c.id} style={{ marginBottom: 8, fontSize: '0.9rem' }}>
               <strong>{c.User?.name || "Anonymous"}:</strong> {c.content}
               {c.User?.id === userId && (
                 <button
                   onClick={() => handleDelete(c.id)}
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 12,
-                    color: "red",
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                  }}
+                  style={{ marginLeft: 8, fontSize: 12, color: "red", border: "none", background: "transparent", cursor: "pointer"}}
                 >
                   🗑
                 </button>
@@ -145,32 +123,20 @@ export default function CommentsSection({ postId, userId }) {
         )}
       </div>
 
-      <div style={{ marginTop: 8, display: "flex" }}>
+      <div style={{ marginTop: 8, display: "flex", gap: '6px' }}>
         <input
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={userId ? "Write a comment..." : "Sign in to comment"}
           disabled={!userId || isPosting}
-          style={{
-            flex: 1,
-            padding: 6,
-            borderRadius: 6,
-            border: "1px solid #ccc",
-          }}
+          style={{ flex: 1, padding: 6, borderRadius: 6, border: "1px solid #ccc" }}
         />
         <button
           onClick={handleAddComment}
           disabled={!userId || isPosting || !newComment.trim()}
-          style={{
-            marginLeft: 6,
-            padding: "6px 10px",
-            background: "#007bff",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-          }}
+          style={{ padding: "6px 10px", background: "#007bff", color: "#fff", border: "none", borderRadius: 6 }}
         >
-          {isPosting ? "Posting..." : "Post"}
+          {isPosting ? "..." : "Post"}
         </button>
       </div>
     </div>

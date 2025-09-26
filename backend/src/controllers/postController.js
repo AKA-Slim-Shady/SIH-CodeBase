@@ -4,6 +4,7 @@ import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Department from '../models/departmentModel.js';
 import { io } from '../server.js'; // import the io instance
+import ComplaintStatus from '../models/complaintStatusModel.js';
 
 // Helper: parse "lat,lng" or JSON string into { latitude, longitude } or null
 function parseLocation(loc) {
@@ -72,34 +73,34 @@ export const getAllPosts = async (req, res) => {
   try {
     const { lat, lng, radiusKm = 5, sort } = req.query;
 
-    // Fetch posts with author and Likes
+    // --- CHANGE 1: Include the ComplaintStatus model in the query ---
     const posts = await Post.findAll({
       order: [["createdAt", "DESC"]],
       include: [
         { model: User, attributes: ["id", "name"] },
         { model: User, as: "Likes", attributes: ["id", "name"] },
+        {
+          model: ComplaintStatus,
+          required: false // This makes it a LEFT JOIN, returning posts even if they have no status
+        }
       ],
     });
 
     const mapped = posts.map((p) => {
-      const plain = p.toJSON ? p.toJSON() : p;
-      let parsedLocation = parseLocation(plain.location);
-
-      // ensure frontend-safe location string
-      let locationStr = plain.location;
-      if (!locationStr && parsedLocation) {
-        locationStr = `${parsedLocation.latitude},${parsedLocation.longitude}`;
-      }
+      const plain = p.toJSON();
+      const parsedLocation = parseLocation(plain.location);
 
       return {
         ...plain,
-        location: locationStr,
+        // --- CHANGE 2: Add a clean 'status' field to the response ---
+        // If a ComplaintStatus object exists, use its status. Otherwise, default to "Pending".
+        status: plain.ComplaintStatus ? plain.ComplaintStatus.status : 'Pending',
         locationParsed: parsedLocation,
-        likesCount: Array.isArray(plain.Likes) ? plain.Likes.length : 0,
+        likesCount: plain.Likes ? plain.Likes.length : 0,
       };
     });
 
-    // filter by distance if lat/lng provided
+    // All filtering and sorting logic from here remains the same
     let filtered = mapped;
     if (lat && lng) {
       const centerLat = parseFloat(lat);
@@ -118,13 +119,10 @@ export const getAllPosts = async (req, res) => {
       });
     }
 
-    // sort by likes if requested
     if (sort === "asc") filtered.sort((a, b) => a.likesCount - b.likesCount);
     else if (sort === "desc") filtered.sort((a, b) => b.likesCount - a.likesCount);
-    else filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    // always return array
-    res.status(200).json(filtered || []);
+    
+    res.status(200).json(filtered);
   } catch (error) {
     console.error("Error fetching posts:", error);
     res.status(500).json({ error: "Failed to fetch posts" });
@@ -239,18 +237,31 @@ export const getPostDept = async (req, res) => {
     }
 };
 
+// in backend/src/controllers/postController.js
+
 export const getMyPosts = async (req, res) => {
     try {
-        const userId = req.user.id; // Get user ID from the protect middleware
+        const userId = req.user.id;
         const posts = await Post.findAll({
             where: { userId: userId },
             order: [['createdAt', 'DESC']],
-            // Optionally include other models if needed on the dashboard
+            // Add the include for ComplaintStatus here as well
             include: [
                 { model: User, attributes: ["id", "name"] },
+                { model: ComplaintStatus, required: false }
             ],
         });
-        res.status(200).json(posts || []); // Ensure an array is always returned
+        
+        // Map the results to include a default status
+        const mappedPosts = posts.map(post => {
+            const plain = post.toJSON();
+            return {
+                ...plain,
+                status: plain.ComplaintStatus ? plain.ComplaintStatus.status : 'Pending'
+            };
+        });
+
+        res.status(200).json(mappedPosts || []);
     } catch (error) {
         console.error("Error fetching user's posts:", error);
         res.status(500).json({ error: "Failed to fetch user's posts" });

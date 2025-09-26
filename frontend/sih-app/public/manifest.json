@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Civic-Watch",
+  "name": "Civic-Watch : Real-time Civic Issue Reporting",
   "icons": [
     {
       "src": "favicon.ico",
